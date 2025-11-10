@@ -1,0 +1,192 @@
+EYE BLINK MORSE CODE - PROJECT DOCUMENTATION
+============================================
+
+PROJECT STRUCTURE:
+------------------
+eye_blink_morse/
+├── main.py          (Main application controller)
+├── config.py        (All settings and configuration)
+├── morse_utils.py   (Morse code translation functions)
+├── audio_utils.py   (Text-to-speech and beep sounds)
+├── vision_utils.py  (Camera and eye detection)
+├── ui_utils.py      (User interface and display)
+└── README.txt       (This file)
+
+FILE DESCRIPTIONS:
+------------------
+
+1. MAIN.PY - The Brain
+   ----------------
+   Purpose: Coordinates all other modules and runs the main program loop
+   Key Functions:
+   - EyeBlinkMorseApp class (main application)
+   - handle_key_input() - processes keyboard commands
+   - run() - main program loop
+   - Manages calibration, sequential input, and blink processing
+
+2. CONFIG.PY - The Control Panel
+   --------------------------
+   Purpose: Contains all adjustable settings and constants
+   Key Sections:
+   - Camera settings (resolution, FPS)
+   - Calibration settings
+   - Eye detection thresholds
+   - Morse code dictionary
+   - Audio timing settings
+   - Display settings
+   Usage: Change numbers here to adjust program behavior without breaking code
+
+3. MORSE_UTILS.PY - The Translator
+   ----------------------------
+   Purpose: Converts between text and Morse code
+   Key Functions:
+   - morse_to_letter() - converts Morse code to text
+   - text_to_morse() - converts text to Morse code
+   - is_valid_prefix() - checks if Morse sequence could become valid
+   Contains: Complete Morse code alphabet A-Z and numbers 0-9
+
+4. AUDIO_UTILS.PY - The Sound System
+   ------------------------------
+   Purpose: Handles all audio output (speech and Morse beeps)
+   Key Components:
+   - AudioManager class
+   - Text-to-speech (TTS) using pyttsx3
+   - Morse code beeps using winsound (Windows) or timing (Mac/Linux)
+   - Background threads for non-blocking audio
+   Features:
+   - speak_text_non_blocking() - speaks text aloud
+   - play_text_as_morse_non_blocking() - plays text as Morse beeps
+
+5. VISION_UTILS.PY - The Eye Tracker
+   ------------------------------
+   Purpose: Handles camera input and blink detection
+   Key Components:
+   - VisionProcessor class
+   - MediaPipe face mesh for eye tracking
+   - Eye Aspect Ratio (EAR) calculation
+   - Blink detection algorithm
+   - Calibration system
+   Features:
+   - Real-time eye landmark detection
+   - Smooth blink detection with noise filtering
+   - Automatic threshold calibration
+
+6. UI_UTILS.PY - The Display Manager
+   ------------------------------
+   Purpose: Handles all visual elements and user interface
+   Key Components:
+   - UIHandler class
+   - Camera feed display with eye landmarks
+   - Text panel with Morse sequence and decoded text
+   - Sequential input interface
+   - Notifications and status messages
+   Features:
+   - Real-time EAR values display
+   - Word-wrapped text display
+   - Control instructions panel
+
+KEYBOARD CONTROLS:
+------------------
+ENTER  - Submit current Morse sequence and convert to letter
+R      - Reset current Morse sequence
+D      - Delete last character from decoded text
+T      - Speak decoded text aloud (Text-to-Speech)
+B      - Play decoded text as Morse code beeps
+Q      - Quit the program
+
+HOW THE SYSTEM WORKS:
+---------------------
+1. CALIBRATION PHASE:
+   - Program learns your normal eye openness over 150 frames
+   - Calculates personalized blink detection thresholds
+   - Keep your eyes open and face the camera
+
+2. SEQUENTIAL INPUT PHASE:
+   - Cycles through: DOT (3s) → Rest (1s) → DASH (3s) → Rest (1s) → SPACE (2s) → Rest (1s)
+   - Blink when the desired symbol is active to add it to your sequence
+
+3. MORSE CODE ENTRY:
+   - Build sequences like ".-" for A, "-..." for B, etc.
+   - Submit with ENTER to convert to text
+   - Invalid sequences show in red
+
+4. AUDIO FEATURES:
+   - Press T to hear your decoded text spoken aloud
+   - Press B to hear your text played as authentic Morse code beeps
+
+DEPENDENCIES REQUIRED:
+----------------------
+- cv2 (OpenCV) - Computer vision and camera handling
+- mediapipe - Face and eye detection
+- pyttsx3 - Text-to-speech engine
+- numpy - Mathematical operations
+- winsound (Windows only) - Beep sounds
+
+INSTALLATION:
+-------------
+pip install opencv-python mediapipe pyttsx3 numpy
+
+TROUBLESHOOTING:
+----------------
+PROBLEM: Blink detection not working
+SOLUTION: Adjust EAR_OPEN_FACTOR in config.py (lower = more sensitive)
+
+PROBLEM: Too many false blink detections  
+SOLUTION: Increase EAR_OPEN_FACTOR or MIN_FRAMES_TO_BLINK in config.py
+
+PROBLEM: No beep sounds on Mac/Linux
+SOLUTION: This is normal - winsound only works on Windows. Program will use timing instead.
+
+PROBLEM: Camera not opening
+SOLUTION: Check camera_index in config.py (try 0, 1, or 2)
+
+PROBLEM: Program runs slowly
+SOLUTION: Reduce CAMERA_WIDTH and CAMERA_HEIGHT in config.py
+
+MORSE CODE REFERENCE:
+---------------------
+LETTERS:
+A .-    B -...  C -.-.  D -..   E .     F ..-.  G --.   H ....
+I ..    J .---  K -.-   L .-..  M --    N -.    O ---   P .--.
+Q --.-  R .-.   S ...   T -     U ..-   V ...-  W .--   X -..-
+Y -.--  Z --..
+
+NUMBERS:
+0 ----- 1 .---- 2 ..--- 3 ...-- 4 ....- 5 ..... 
+6 -.... 7 --... 8 ---.. 9 ----.
+
+COMMON CODES:
+SOS ... --- ...
+YES -.-- . ...
+NO -. ---
+HELLO .... . .-.. .-.. ---
+
+SEQUENTIAL INPUT TIMING:
+------------------------
+DOT Phase:   3.0 seconds - Blink to add a dot (.)
+Interval:    1.0 seconds - Rest period
+DASH Phase:  3.0 seconds - Blink to add a dash (-)  
+Interval:    1.0 seconds - Rest period
+SPACE Phase: 2.0 seconds - Blink to add a space
+Interval:    1.0 seconds - Rest period
+(Repeats continuously)
+
+AUDIO TIMING:
+-------------
+Dot beep:     200ms
+Dash beep:    600ms (3x dot)
+Element gap:  200ms (between dots/dashes)
+Letter gap:   400ms (between letters)
+Word gap:     800ms (between words)
+
+STARTING THE PROGRAM:
+---------------------
+1. Navigate to the eye_blink_morse folder
+2. Run: python main.py
+3. Follow on-screen instructions for calibration
+4. Use the sequential interface to enter Morse code
+
+SUPPORT:
+--------
+This system is designed for accessibility, allowing Morse code input through eye blinks.
+It can be customized for individual users by adjusting the settings in config.py.

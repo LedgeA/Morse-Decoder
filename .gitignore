@@ -1,22 +1,91 @@
 # Ignore virtual environment
 venv310/
+venv/
+env/
+ENV/
+.env
 
 # Ignore Python cache files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.Python
 
 # Ignore Python egg and distribution files
 *.egg
 *.egg-info/
 dist/
 build/
+pip-wheel-metadata/
 
-# Ignore IDE/editor settings (optional)
+# Ignore coverage reports
+.coverage
+htmlcov/
+.coverage.*
+
+# Ignore Jupyter notebooks
+.ipynb_checkpoints
+
+# Ignore IDE/editor settings
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # Ignore system files
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Ignore log files
+*.log
+logs/
+
+# Ignore temporary files
+*.tmp
+*.temp
+
+# Ignore test files (optional - include if you have tests)
+test_results/
+pytest_cache/
+.tox/
+
+# Ignore documentation builds
+docs/_build/
+
+# Ignore database files (if any)
+*.db
+*.sqlite3
+
+# Ignore media files (if any)
+media/
+uploads/
+
+# Ignore specific to this project
+calibration_data/  # If you save calibration data
+user_settings/     # If you save user-specific settings
+
+# Ignore large data files (if any)
+*.csv
+*.json
+*.xml
+*.dat
+
+# Ignore package manager files
+Pipfile
+Pipfile.lock
+poetry.lock
+pyproject.toml  # Keep this if you use it, otherwise ignore
+
+# Ignore macOS specific
+.AppleDouble
+.LSOverride
+
+# Ignore Windows specific
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Ignore Linux specific
+*~
