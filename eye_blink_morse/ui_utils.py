@@ -199,11 +199,17 @@ class UIHandler:
             if blink_detected:
                 cv2.putText(frame, f"INPUT DETECTED: {icon_text}", (w // 2 - 100, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
-    
+
+    def draw_light_readings(self, frame, coords):
+        if coords is not None:
+            x1, y1, x2, y2 = coords
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+
     def draw_ear_readings(self, frame, left_ear: float, right_ear: float, status_text: str = ""):
         """
         Draw EAR readings and status on frame
-        
+
         Args:
             frame: Frame to draw on
             left_ear: Left eye EAR value

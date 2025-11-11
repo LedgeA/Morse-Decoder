@@ -6,10 +6,11 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from collections import deque
+from ultralytics import YOLO
 from config import *
 
 class VisionProcessor:
-    """
+    """`
     Handles face detection, eye tracking, and blink detection
     """
     
@@ -20,7 +21,9 @@ class VisionProcessor:
             min_detection_confidence=0.6,
             min_tracking_confidence=0.6
         )
-        
+
+        self.light_model = YOLO('best.pt')
+
         # EAR smoothing histories
         self.left_ear_hist = deque(maxlen=EAR_SMOOTHING)
         self.right_ear_hist = deque(maxlen=EAR_SMOOTHING)
@@ -75,7 +78,7 @@ class VisionProcessor:
         
         return (A + B) / (2.0 * C)
     
-    def process_frame(self, frame):
+    def process_eyeframe(self, frame):
         """
         Process frame to detect face and calculate EAR values
         
@@ -112,7 +115,17 @@ class VisionProcessor:
                 self.open_ear_values.append(avg_ear_s)
         
         return results, left_ear_s, right_ear_s, avg_ear_s
-    
+
+    def process_light_frame(self, display_frame):
+        results = self.light_model(display_frame)
+        result = results[0]
+        if len(result.boxes) > 0:
+            box = result.boxes[0]
+            # confidence = float(box.conf[0])
+
+            return box
+        return None
+
     def complete_calibration(self):
         """
         Complete calibration phase and set EAR thresholds
@@ -144,16 +157,16 @@ class VisionProcessor:
             # Draw eye contours
             for i in range(len(points)):
                 cv2.line(frame, points[i], points[(i + 1) % len(points)], (0, 255, 0), 1)
-    
-    def detect_blink(self, avg_ear_s: float, current_symbol: str, current_time: float) -> tuple:
+
+    def detect_eye_blink(self, avg_ear_s: float, current_symbol: str, current_time: float) -> tuple:
         """
         Detect blink based on EAR values and current symbol
-        
+
         Args:
             avg_ear_s: Smoothed average EAR value
             current_symbol: Current active symbol ('.', '-', or ' ')
             current_time: Current timestamp
-        
+
         Returns:
             tuple: (blink_detected, new_symbol, blink_ended)
         """
@@ -203,7 +216,53 @@ class VisionProcessor:
                 blink_ended = True
         
         return blink_detected, new_symbol, blink_ended
-    
+
+    def detect_light_blink(self, light_conf: float, current_symbol: str, current_time: float) -> tuple:
+
+        is_closed_raw = light_conf < 0.5
+        is_open_raw = light_conf > 0.5
+
+        potential_blink_type = current_symbol if is_closed_raw else None
+
+        blink_detected = False
+        new_symbol = None
+        blink_ended = False
+
+        # Blink start detection
+        if not self.blinking:
+            if potential_blink_type == current_symbol:
+                self.blink_frame_counter += 1
+                self.open_frame_counter = 0
+                if self.blink_frame_counter >= MIN_FRAMES_TO_BLINK:
+                    self.blinking = True
+                    self.blink_start_time = current_time
+                    self.blink_type = potential_blink_type
+                    blink_detected = True
+            else:
+                self.blink_frame_counter = 0
+
+        # Blink end detection
+        if self.blinking:
+            if is_open_raw:
+                self.open_frame_counter += 1
+                self.blink_frame_counter = 0
+                if self.open_frame_counter >= MIN_FRAMES_TO_OPEN:
+                    blink_duration = current_time - self.blink_start_time
+
+                    if MIN_BLINK_DURATION <= blink_duration <= MAX_BLINK_DURATION:
+                        if self.blink_type in ['.', '-']:
+                            new_symbol = self.blink_type
+
+                    blink_ended = True
+                    self._reset_blink_state()
+
+            elif self.blink_start_time and (current_time - self.blink_start_time > MAX_BLINK_DURATION):
+                # Blink too long, reset
+                self._reset_blink_state()
+                blink_ended = True
+
+        return blink_detected, new_symbol, blink_ended
+
     def _reset_blink_state(self):
         """Reset blink detection state"""
         self.blinking = False

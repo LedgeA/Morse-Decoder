@@ -10,7 +10,7 @@ from audio_utils import AudioManager
 from vision_utils import VisionProcessor
 from ui_utils import UIHandler
 
-class EyeBlinkMorseApp:
+class MorseDecoderApp:
     """
     Main application class for blink-based Morse code input
     This class acts as the brain that connects camera, vision, audio, and UI
@@ -192,7 +192,7 @@ class EyeBlinkMorseApp:
             # Reset timer for new phase
             self.sequence_start_time = current_time
     
-    def process_blink_input(self, avg_ear_s: float, current_time: float):
+    def process_eye_blink_input(self, avg_ear_s: float, current_time: float):
         """
         Detect when user blinks and add the corresponding Morse symbol
         avg_ear_s is the Eye Aspect Ratio - lower means eyes are more closed
@@ -202,9 +202,9 @@ class EyeBlinkMorseApp:
             symbol = self.current_symbol_data["symbol"]  # Current active symbol
             
             # Ask vision processor to detect if this is a valid blink
-            blink_detected, new_symbol, blink_ended = self.vision_processor.detect_blink(
+            blink_detected, new_symbol, blink_ended = self.vision_processor.detect_eye_blink(
                 avg_ear_s, symbol, current_time)
-            
+
             if new_symbol:
                 # User blinked during the correct symbol phase!
                 # Add this symbol to our Morse sequence
@@ -219,8 +219,106 @@ class EyeBlinkMorseApp:
                     self.invalid_sequence_detected = True
                     message = f"ERROR: '{temp_seq}' invalid prefix."
                     self.ui_handler.show_notification(message, current_time, is_error=True)
-    
-    def run(self):
+
+    def process_light_blink_input(self, light_conf: float, current_time: float):
+        # Only process blinks during symbol phases (not during rest periods)
+        if not self.is_interval_phase:
+            symbol = self.current_symbol_data["symbol"]  # Current active symbol
+
+            # Ask vision processor to detect if this is a valid blink
+            blink_detected, new_symbol, blink_ended = self.vision_processor.detect_light_blink(
+                light_conf, symbol, current_time)
+
+            if new_symbol:
+                # User blinked during the correct symbol phase!
+                # Add this symbol to our Morse sequence
+                temp_seq = self.morse_sequence + new_symbol
+
+                # Check if this could be part of a valid Morse code
+                if is_valid_prefix(temp_seq):
+                    self.morse_sequence = temp_seq
+                    self.invalid_sequence_detected = False
+                else:
+                    # This sequence can't become any valid Morse code
+                    self.invalid_sequence_detected = True
+                    message = f"ERROR: '{temp_seq}' invalid prefix."
+                    self.ui_handler.show_notification(message, current_time, is_error=True)
+
+    def run_light_blink(self):
+        """Main program loop - this is where everything happens!"""
+        print("Blink-to-Morse detector initializing...")
+
+        self.calibration_done = True
+
+        # Set up all our systems
+        self.initialize_camera()
+        self.audio_manager.start_audio_threads()
+
+        try:
+            running = True
+            # Main loop: keep running until user quits or camera fails
+            while running and self.cap.isOpened():
+                # Get the next frame from camera
+                success, frame = self.cap.read()
+                if not success:
+                    break
+
+                # Mirror the image so it feels more natural
+                frame = cv2.flip(frame, 1)
+                display_frame = frame.copy()  # We'll draw on this copy
+                current_time = time.time()  # Get current time for timing
+
+                # Process the frame to detect light and get confidence score
+                result_box = self.vision_processor.process_light_frame(display_frame)
+
+                # Initialize before
+                confidence = 0.0
+                coords = 0.0
+
+                if result_box is not None:
+                    confidence = float(result_box.conf[0])
+                    coords = result_box.xyxy[0].cpu().numpy().astype(int)
+
+                # Check for keyboard input
+                key = cv2.waitKey(1) & 0xFF
+                running = self.handle_key_input(key, current_time)
+                if not running:
+                    break  # User pressed 'Q' to quit
+
+                # NORMAL OPERATION: User is entering Morse code
+                status_text = ""
+                self.update_sequential_input(current_time)  # Cycle through symbols
+                self.process_light_blink_input(confidence, current_time)  # Detect blinks
+
+                # DRAW VISUAL INTERFACE
+                if result_box is not None:
+                    self.ui_handler.draw_light_readings(display_frame, coords)
+
+                # Draw the sequential input interface (DOT/DASH/SPACE cycling)
+                elapsed_time = current_time - self.sequence_start_time
+                duration = INTERVAL_DURATION if self.is_interval_phase else self.current_symbol_data["duration"]
+                time_left = max(0.0, duration - elapsed_time)
+
+                self.ui_handler.draw_sequential_ui(
+                    display_frame, self.is_interval_phase,
+                    self.current_symbol_data["symbol"], time_left)
+
+                # Create the side panel with Morse sequence and decoded text
+                text_panel = self.ui_handler.create_text_panel(
+                    display_frame.shape[0], self.morse_sequence,
+                    self.decoded_text, self.invalid_sequence_detected)
+
+                # Combine camera view with text panel and show to user
+                self.ui_handler.display_combined_frame(display_frame, text_panel)
+
+        except KeyboardInterrupt:
+            print("\nInterrupted by user")
+
+        finally:
+            # Always clean up, even if something went wrong
+            self.cleanup()
+
+    def run_eye_blink(self):
         """Main program loop - this is where everything happens!"""
         print("Blink-to-Morse detector initializing...")
         print(f"Calibrating for {CALIBRATION_FRAMES} frames. Please keep your eyes open.")
@@ -244,7 +342,7 @@ class EyeBlinkMorseApp:
                 current_time = time.time()    # Get current time for timing
                 
                 # Process the frame to detect face and calculate eye openness
-                results, left_ear_s, right_ear_s, avg_ear_s = self.vision_processor.process_frame(frame)
+                results, left_ear_s, right_ear_s, avg_ear_s = self.vision_processor.process_eyeframe(frame)
                 
                 # Check for keyboard input
                 key = cv2.waitKey(1) & 0xFF
@@ -270,7 +368,7 @@ class EyeBlinkMorseApp:
                     # NORMAL OPERATION: User is entering Morse code
                     status_text = ""
                     self.update_sequential_input(current_time)  # Cycle through symbols
-                    self.process_blink_input(avg_ear_s, current_time)  # Detect blinks
+                    self.process_eye_blink_input(avg_ear_s, current_time)  # Detect blinks
                 
                 # DRAW VISUAL INTERFACE
                 
@@ -321,5 +419,5 @@ class EyeBlinkMorseApp:
 
 # This is the entry point - when you run the script, this happens:
 if __name__ == "__main__":
-    app = EyeBlinkMorseApp()  # Create the application
-    app.run()                 # Start the main loop
+    app = MorseDecoderApp()  # Create the application
+    app.run_eye_blink()                 # Start the main loop
