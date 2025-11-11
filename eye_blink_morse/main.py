@@ -420,4 +420,4 @@ class MorseDecoderApp:
 # This is the entry point - when you run the script, this happens:
 if __name__ == "__main__":
     app = MorseDecoderApp()  # Create the application
-    app.run_eye_blink()                 # Start the main loop
+    app.run_light_blink()    # Start the main loop
