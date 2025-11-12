@@ -6,6 +6,10 @@ import threading
 import pyttsx3 # This needs to be available for pyttsx3.speak
 from queue import Queue
 import sys
+
+from eye_blink_morse.config import BEEP_FREQUENCY, DOT_DURATION_MS, INTER_ELEMENT_GAP_MS, DASH_DURATION_MS, \
+    INTER_LETTER_GAP_MS, INTER_WORD_GAP_MS
+
 # from config import * # Keep this if config is necessary for other parts
 
 # Try to import winsound (Windows)
@@ -182,9 +186,3 @@ class AudioManager:
                 self.beep_thread.join(timeout=1.0)
         except Exception:
             pass
-
-        # The line below is now unnecessary since pyttsx3.speak handles engine cleanup
-        # try:
-        #     self.tts_engine.stop()
-        # except Exception:
-        #     pass
