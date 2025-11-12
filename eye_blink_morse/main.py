@@ -4,6 +4,7 @@ This is the central file that coordinates all the other modules
 """
 import time
 import cv2
+import numpy as np
 from config import *
 from morse_utils import *
 from audio_utils import AudioManager
@@ -15,14 +16,14 @@ class MorseDecoderApp:
     Main application class for blink-based Morse code input
     This class acts as the brain that connects camera, vision, audio, and UI
     """
-    
+
     def __init__(self):
         """Initialize all the different parts of our application"""
         # Create managers for different functions
         self.audio_manager = AudioManager()        # Handles sounds and speech
         self.vision_processor = VisionProcessor()  # Handles camera and eye detection
-        self.ui_handler = UIHandler("Eye Blink Morse Code (Sequential Input - Both Eyes Only)")  # Handles display
-        
+        self.ui_handler = UIHandler("LuminEye")  # Handles display
+
         # Track what Morse code the user has entered so far
         self.morse_sequence = ""      # Current sequence of dots and dashes (like ".-.")
         self.decoded_text = ""        # Translated text (like "A")
@@ -206,19 +207,26 @@ class MorseDecoderApp:
                 avg_ear_s, symbol, current_time)
 
             if new_symbol:
-                # User blinked during the correct symbol phase!
-                # Add this symbol to our Morse sequence
-                temp_seq = self.morse_sequence + new_symbol
-                
-                # Check if this could be part of a valid Morse code
-                if is_valid_prefix(temp_seq):
-                    self.morse_sequence = temp_seq
-                    self.invalid_sequence_detected = False
+                if new_symbol == 'SPACE':  # Handle space separately
+                    # Add space to decoded text
+                    if self.decoded_text and self.decoded_text[-1] != " ":
+                        self.decoded_text += " "
+                        message = "SPACE added."
+                        self.ui_handler.show_notification(message, current_time)
+                        print(message)
                 else:
-                    # This sequence can't become any valid Morse code
-                    self.invalid_sequence_detected = True
-                    message = f"ERROR: '{temp_seq}' invalid prefix."
-                    self.ui_handler.show_notification(message, current_time, is_error=True)
+                    # Regular Morse symbol (dot or dash)
+                    temp_seq = self.morse_sequence + new_symbol
+
+                    # Check if this could be part of a valid Morse code
+                    if is_valid_prefix(temp_seq):
+                        self.morse_sequence = temp_seq
+                        self.invalid_sequence_detected = False
+                    else:
+                        # This sequence can't become any valid Morse code
+                        self.invalid_sequence_detected = True
+                        message = f"ERROR: '{temp_seq}' invalid prefix."
+                        self.ui_handler.show_notification(message, current_time, is_error=True)
 
     def process_light_blink_input(self, light_conf: float, current_time: float):
         # Only process blinks during symbol phases (not during rest periods)
@@ -230,19 +238,26 @@ class MorseDecoderApp:
                 light_conf, symbol, current_time)
 
             if new_symbol:
-                # User blinked during the correct symbol phase!
-                # Add this symbol to our Morse sequence
-                temp_seq = self.morse_sequence + new_symbol
-
-                # Check if this could be part of a valid Morse code
-                if is_valid_prefix(temp_seq):
-                    self.morse_sequence = temp_seq
-                    self.invalid_sequence_detected = False
+                if new_symbol == 'SPACE':  # Handle space separately
+                    # Add space to decoded text
+                    if self.decoded_text and self.decoded_text[-1] != " ":
+                        self.decoded_text += " "
+                        message = "SPACE added."
+                        self.ui_handler.show_notification(message, current_time)
+                        print(message)
                 else:
-                    # This sequence can't become any valid Morse code
-                    self.invalid_sequence_detected = True
-                    message = f"ERROR: '{temp_seq}' invalid prefix."
-                    self.ui_handler.show_notification(message, current_time, is_error=True)
+                    # Regular Morse symbol (dot or dash)
+                    temp_seq = self.morse_sequence + new_symbol
+
+                    # Check if this could be part of a valid Morse code
+                    if is_valid_prefix(temp_seq):
+                        self.morse_sequence = temp_seq
+                        self.invalid_sequence_detected = False
+                    else:
+                        # This sequence can't become any valid Morse code
+                        self.invalid_sequence_detected = True
+                        message = f"ERROR: '{temp_seq}' invalid prefix."
+                        self.ui_handler.show_notification(message, current_time, is_error=True)
 
     def run_light_blink(self):
         """Main program loop - this is where everything happens!"""
@@ -342,7 +357,7 @@ class MorseDecoderApp:
                 current_time = time.time()    # Get current time for timing
                 
                 # Process the frame to detect face and calculate eye openness
-                results, left_ear_s, right_ear_s, avg_ear_s = self.vision_processor.process_eyeframe(frame)
+                results, left_ear_s, right_ear_s, avg_ear_s = self.vision_processor.process_eye_frame(frame)
                 
                 # Check for keyboard input
                 key = cv2.waitKey(1) & 0xFF
@@ -417,7 +432,81 @@ class MorseDecoderApp:
         
         print("Program terminated cleanly.")
 
+
+def show_selection_ui():
+    """
+    Displays a simple OpenCV window to select the input mode.
+    Returns 'eye', 'light', or 'quit'.
+    """
+    # Create a blank black image
+    width, height = 640, 480
+    menu_image = np.zeros((height, width, 3), dtype=np.uint8)
+
+    # --- Draw the menu options ---
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    # Title
+    title = "Select Input Mode"
+    (text_width, _), baseline = cv2.getTextSize(title, font, 1.2, 2)
+    cv2.putText(menu_image, title, ((width - text_width) // 2, 80),
+                font, 1.2, (255, 255, 255), 2, cv2.LINE_AA)
+
+    # Option 1
+    cv2.putText(menu_image, "Press '1': Eye Blink Detection", (100, 200),
+                font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+
+    # Option 2
+    cv2.putText(menu_image, "Press '2': Light Blink Detection", (100, 280),
+                font, 1, (0, 255, 255), 2, cv2.LINE_AA)
+
+    # Option 3
+    cv2.putText(menu_image, "Press 'Q': Quit", (100, 360),
+                font, 1, (0, 0, 255), 2, cv2.LINE_AA)
+
+    # Select Mode
+    window_name = "LuminEye"
+    cv2.imshow(window_name, menu_image)
+
+    choice = None
+    while choice is None:
+        key = cv2.waitKey(1) & 0xFF
+
+        if key == ord('1'):
+            choice = 'eye'
+        elif key == ord('2'):
+            choice = 'light'
+        elif key == ord('q') or key == ord('Q'):
+            choice = 'quit'
+
+        # Allow closing the window to also quit
+        try:
+            if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
+                choice = 'quit'
+        except cv2.error:
+            # Window was closed manually
+            choice = 'quit'
+
+    cv2.destroyWindow(window_name)
+    # Add a small delay to ensure window closes before new one opens
+    cv2.waitKey(1)
+    return choice
+
+
 # This is the entry point - when you run the script, this happens:
 if __name__ == "__main__":
-    app = MorseDecoderApp()  # Create the application
-    app.run_light_blink()    # Start the main loop
+
+    # Show the UI selection menu first
+    user_choice = show_selection_ui()
+
+    if user_choice != 'quit':
+        # Only create the app if the user didn't quit
+        app = MorseDecoderApp()  # Create the application
+
+        if user_choice == 'eye':
+            print("Initializing Eye Blink Detection mode...")
+            app.run_eye_blink()
+        elif user_choice == 'light':
+            print("Initializing Light Blink Detection mode...")
+            app.run_light_blink()
+    else:
+        print("Exiting application.")

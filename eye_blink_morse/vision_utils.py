@@ -78,7 +78,7 @@ class VisionProcessor:
         
         return (A + B) / (2.0 * C)
     
-    def process_eyeframe(self, frame):
+    def process_eye_frame(self, frame):
         """
         Process frame to detect face and calculate EAR values
         
@@ -172,16 +172,16 @@ class VisionProcessor:
         """
         if not self.calibration_done:
             return False, None, False
-            
+
         is_both_closed_raw = avg_ear_s < self.EAR_CLOSED_THRESHOLD
         is_open_raw = avg_ear_s > self.EAR_OPEN_THRESHOLD
-        
+
         potential_blink_type = current_symbol if is_both_closed_raw else None
-        
+
         blink_detected = False
         new_symbol = None
         blink_ended = False
-        
+
         # Blink start detection
         if not self.blinking:
             if potential_blink_type == current_symbol:
@@ -194,7 +194,7 @@ class VisionProcessor:
                     blink_detected = True
             else:
                 self.blink_frame_counter = 0
-        
+
         # Blink end detection
         if self.blinking:
             if is_open_raw:
@@ -202,19 +202,22 @@ class VisionProcessor:
                 self.blink_frame_counter = 0
                 if self.open_frame_counter >= MIN_FRAMES_TO_OPEN:
                     blink_duration = current_time - self.blink_start_time
-                    
+
                     if MIN_BLINK_DURATION <= blink_duration <= MAX_BLINK_DURATION:
                         if self.blink_type in ['.', '-']:
                             new_symbol = self.blink_type
-                    
+                        elif self.blink_type == ' ':
+                            # SPACE DETECTED - return special flag
+                            new_symbol = 'SPACE'  # Special flag for space
+
                     blink_ended = True
                     self._reset_blink_state()
-                    
+
             elif self.blink_start_time and (current_time - self.blink_start_time > MAX_BLINK_DURATION):
                 # Blink too long, reset
                 self._reset_blink_state()
                 blink_ended = True
-        
+
         return blink_detected, new_symbol, blink_ended
 
     def detect_light_blink(self, light_conf: float, current_symbol: str, current_time: float) -> tuple:
@@ -252,6 +255,9 @@ class VisionProcessor:
                     if MIN_BLINK_DURATION <= blink_duration <= MAX_BLINK_DURATION:
                         if self.blink_type in ['.', '-']:
                             new_symbol = self.blink_type
+                        elif self.blink_type == ' ':
+                            # SPACE DETECTED - return special flag
+                            new_symbol = 'SPACE'  # Special flag for space
 
                     blink_ended = True
                     self._reset_blink_state()
