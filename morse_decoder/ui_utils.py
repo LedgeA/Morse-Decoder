@@ -169,16 +169,6 @@ class UIHandler:
     
     def draw_sequential_ui(self, frame, is_interval_phase: bool, current_symbol: str, 
                           time_left: float, blink_detected: bool = False):
-        """
-        Draw sequential input UI elements on main frame
-        
-        Args:
-            frame: Frame to draw on
-            is_interval_phase: Whether in interval phase
-            current_symbol: Current active symbol
-            time_left: Time left for current phase
-            blink_detected: Whether blink was detected
-        """
         h, w, _ = frame.shape
         
         if is_interval_phase:
@@ -207,16 +197,7 @@ class UIHandler:
 
 
     def draw_ear_readings(self, frame, left_ear: float, right_ear: float, status_text: str = ""):
-        """
-        Draw EAR readings and status on frame
-
-        Args:
-            frame: Frame to draw on
-            left_ear: Left eye EAR value
-            right_ear: Right eye EAR value
-            status_text: Status text to display
-        """
-        cv2.putText(frame, f"L-EAR: {left_ear:.2f}", (10, 30), 
+        cv2.putText(frame, f"L-EAR: {left_ear:.2f}", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
         cv2.putText(frame, f"R-EAR: {right_ear:.2f}", (10, 60), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
@@ -226,16 +207,8 @@ class UIHandler:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
     
     def display_combined_frame(self, camera_frame: np.ndarray, text_panel: np.ndarray):
-        """
-        Display combined camera feed and text panel
-        
-        Args:
-            camera_frame: Camera feed frame
-            text_panel: Text panel frame
-        """
         combined = cv2.hconcat([camera_frame, text_panel])
         cv2.imshow(self.window_title, combined)
     
     def cleanup(self):
-        """Clean up UI resources"""
         cv2.destroyAllWindows()

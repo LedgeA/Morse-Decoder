@@ -1,7 +1,3 @@
-"""
-Configuration settings for the Eye Blink Morse Code system
-"""
-
 # Camera settings
 CAMERA_WIDTH = 1000
 CAMERA_HEIGHT = 700

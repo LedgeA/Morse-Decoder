@@ -1,7 +1,3 @@
-"""
-Main application file for Eye Blink Morse Code system
-This is the central file that coordinates all the other modules
-"""
 import time
 import cv2
 import numpy as np
@@ -12,13 +8,8 @@ from vision_utils import VisionProcessor
 from ui_utils import UIHandler
 
 class MorseDecoderApp:
-    """
-    Main application class for blink-based Morse code input
-    This class acts as the brain that connects camera, vision, audio, and UI
-    """
 
     def __init__(self):
-        """Initialize all the different parts of our application"""
         # Create managers for different functions
         self.audio_manager = AudioManager()        # Handles sounds and speech
         self.vision_processor = VisionProcessor()  # Handles camera and eye detection
@@ -63,10 +54,6 @@ class MorseDecoderApp:
         print(f"Attempted to set FPS to {TARGET_FPS}. Actual FPS: {actual_fps}")
     
     def handle_key_input(self, key: int, current_time: float):
-        """
-        Process keyboard commands from user
-        Returns True to keep running, False to quit
-        """
         # Ignore keys if pressed too quickly (prevent double-presses)
         if current_time - self.last_key_time <= KEY_COOLDOWN:
             return True
@@ -94,7 +81,7 @@ class MorseDecoderApp:
         return True
     
     def _handle_reset(self, current_time: float):
-        """Clear the current Morse sequence and reset state"""
+        # Clear the current Morse sequence and reset state
         self.morse_sequence = ""
         self.invalid_sequence_detected = False
         self.ui_handler.show_notification("RESET: Current Morse sequence cleared.", current_time)
@@ -102,7 +89,7 @@ class MorseDecoderApp:
         self.last_key_time = current_time
     
     def _handle_submit(self, current_time: float):
-        """Convert current Morse sequence to a letter and add to decoded text"""
+        # Convert current Morse sequence to a letter and add to decoded text
         if self.morse_sequence:
             # Try to translate Morse code to a letter/number
             letter = morse_to_letter(self.morse_sequence)
@@ -129,7 +116,7 @@ class MorseDecoderApp:
         self.last_key_time = current_time
     
     def _handle_delete(self, current_time: float):
-        """Remove the last character from the decoded text"""
+        # Remove the last character from the decoded text
         if self.decoded_text:
             deleted_char = self.decoded_text[-1]
             self.decoded_text = self.decoded_text[:-1]  # Remove last character
@@ -143,7 +130,7 @@ class MorseDecoderApp:
         self.last_key_time = current_time
     
     def _handle_speak(self, current_time: float):
-        """Use text-to-speech to read the decoded text aloud"""
+        # Use text-to-speech to read the decoded text aloud
         if self.decoded_text:
             self.ui_handler.show_notification("Speaking decoded text...", current_time)
             self.audio_manager.speak_text_non_blocking(self.decoded_text)
@@ -154,7 +141,7 @@ class MorseDecoderApp:
         self.last_key_time = current_time
     
     def _handle_beep(self, current_time: float):
-        """Play the decoded text as Morse code beeps"""
+        # Play the decoded text as Morse code beeps
         if self.decoded_text:
             message = f"Playing Morse beeps for: '{self.decoded_text}'"
             self.ui_handler.show_notification(message, current_time)
@@ -166,10 +153,6 @@ class MorseDecoderApp:
         self.last_key_time = current_time
     
     def update_sequential_input(self, current_time: float):
-        """
-        Cycle through the input sequence: DOT -> rest -> DASH -> rest -> SPACE -> rest
-        This creates the timed interface for blink input
-        """
         if not self.calibration_done:
             return  # Don't start until calibration is complete
         
@@ -194,10 +177,6 @@ class MorseDecoderApp:
             self.sequence_start_time = current_time
     
     def process_eye_blink_input(self, avg_ear_s: float, current_time: float):
-        """
-        Detect when user blinks and add the corresponding Morse symbol
-        avg_ear_s is the Eye Aspect Ratio - lower means eyes are more closed
-        """
         # Only process blinks during symbol phases (not during rest periods)
         if not self.is_interval_phase and self.calibration_done:
             symbol = self.current_symbol_data["symbol"]  # Current active symbol
@@ -229,7 +208,6 @@ class MorseDecoderApp:
                         self.ui_handler.show_notification(message, current_time, is_error=True)
 
     def process_light_blink_input(self, light_conf: float, current_time: float):
-        # Only process blinks during symbol phases (not during rest periods)
         if not self.is_interval_phase:
             symbol = self.current_symbol_data["symbol"]  # Current active symbol
 
@@ -260,7 +238,6 @@ class MorseDecoderApp:
                         self.ui_handler.show_notification(message, current_time, is_error=True)
 
     def run_light_blink(self):
-        """Main program loop - this is where everything happens!"""
         print("Blink-to-Morse detector initializing...")
 
         self.calibration_done = True
@@ -334,7 +311,6 @@ class MorseDecoderApp:
             self.cleanup()
 
     def run_eye_blink(self):
-        """Main program loop - this is where everything happens!"""
         print("Blink-to-Morse detector initializing...")
         print(f"Calibrating for {CALIBRATION_FRAMES} frames. Please keep your eyes open.")
         
@@ -421,7 +397,6 @@ class MorseDecoderApp:
             self.cleanup()
     
     def cleanup(self):
-        """Shut down everything properly"""
         if self.cap:
             self.cap.release()  # Release camera
         
@@ -434,10 +409,6 @@ class MorseDecoderApp:
 
 
 def show_selection_ui():
-    """
-    Displays a simple OpenCV window to select the input mode.
-    Returns 'eye', 'light', or 'quit'.
-    """
     # Create a blank black image
     width, height = 640, 480
     menu_image = np.zeros((height, width, 3), dtype=np.uint8)

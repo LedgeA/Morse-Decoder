@@ -1,6 +1,3 @@
-"""
-Computer vision utilities for face and eye detection
-"""
 import math
 import cv2
 import mediapipe as mp
@@ -10,19 +7,15 @@ from ultralytics import YOLO
 from config import *
 
 class VisionProcessor:
-    """`
-    Handles face detection, eye tracking, and blink detection
-    """
-    
     def __init__(self):
-        """Initialize MediaPipe face mesh and tracking variables"""
+        # Initialize MediaPipe face mesh and tracking variables
         self.face_mesh = mp.solutions.face_mesh.FaceMesh(
             refine_landmarks=True,
             min_detection_confidence=0.6,
             min_tracking_confidence=0.6
         )
 
-        self.light_model = YOLO('best.pt')
+        self.light_model = YOLO('assets/best.pt')
 
         # EAR smoothing histories
         self.left_ear_hist = deque(maxlen=EAR_SMOOTHING)
@@ -44,28 +37,9 @@ class VisionProcessor:
         
     @staticmethod
     def euclidean_distance(p1, p2) -> float:
-        """
-        Calculate Euclidean distance between two points
-        
-        Args:
-            p1, p2: Points with x and y attributes
-        
-        Returns:
-            Euclidean distance
-        """
         return math.hypot(p1.x - p2.x, p1.y - p2.y)
     
     def eye_aspect_ratio(self, landmarks, eye_indices) -> float:
-        """
-        Calculate Eye Aspect Ratio (EAR) for given eye landmarks
-        
-        Args:
-            landmarks: MediaPipe face landmarks
-            eye_indices: Indices of eye landmarks
-        
-        Returns:
-            EAR value (higher = more open, lower = more closed)
-        """
         # Vertical distances
         A = self.euclidean_distance(landmarks[eye_indices[1]], landmarks[eye_indices[5]])
         B = self.euclidean_distance(landmarks[eye_indices[2]], landmarks[eye_indices[4]])
@@ -79,15 +53,6 @@ class VisionProcessor:
         return (A + B) / (2.0 * C)
     
     def process_eye_frame(self, frame):
-        """
-        Process frame to detect face and calculate EAR values
-        
-        Args:
-            frame: Input video frame
-        
-        Returns:
-            tuple: (results, left_ear_smoothed, right_ear_smoothed, avg_ear_smoothed)
-        """
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.face_mesh.process(rgb_frame)
         
@@ -127,9 +92,6 @@ class VisionProcessor:
         return None
 
     def complete_calibration(self):
-        """
-        Complete calibration phase and set EAR thresholds
-        """
         if self.open_ear_values:
             baseline_open_ear = float(np.percentile(self.open_ear_values, 80))
             self.EAR_CLOSED_THRESHOLD = baseline_open_ear * EAR_OPEN_FACTOR
@@ -137,13 +99,6 @@ class VisionProcessor:
             self.calibration_done = True
     
     def draw_eye_landmarks(self, frame, landmarks):
-        """
-        Draw eye landmarks on the frame
-        
-        Args:
-            frame: Frame to draw on
-            landmarks: MediaPipe face landmarks
-        """
         h, w, _ = frame.shape
         
         for eye_indices in [LEFT_EYE, RIGHT_EYE]:
@@ -159,17 +114,6 @@ class VisionProcessor:
                 cv2.line(frame, points[i], points[(i + 1) % len(points)], (0, 255, 0), 1)
 
     def detect_eye_blink(self, avg_ear_s: float, current_symbol: str, current_time: float) -> tuple:
-        """
-        Detect blink based on EAR values and current symbol
-
-        Args:
-            avg_ear_s: Smoothed average EAR value
-            current_symbol: Current active symbol ('.', '-', or ' ')
-            current_time: Current timestamp
-
-        Returns:
-            tuple: (blink_detected, new_symbol, blink_ended)
-        """
         if not self.calibration_done:
             return False, None, False
 
@@ -270,7 +214,6 @@ class VisionProcessor:
         return blink_detected, new_symbol, blink_ended
 
     def _reset_blink_state(self):
-        """Reset blink detection state"""
         self.blinking = False
         self.blink_start_time = None
         self.blink_type = None
@@ -278,6 +221,5 @@ class VisionProcessor:
         self.open_frame_counter = 0
     
     def cleanup(self):
-        """Clean up vision resources"""
         if self.face_mesh:
             self.face_mesh.close()
